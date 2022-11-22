@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::process::Command;
 use users::get_current_username;
+// use users::get_current_username;
 
 /// a (bad) thing to go through (local) ip addresses and (try to) ssh into them.
 /// basically, imagine if you could run "ssh 192.168.1.*".
@@ -20,12 +21,27 @@ struct Args {
     zero: bool,
 }
 
-fn main() {
-    let args = Args::parse();
-    match run_ssh(args.port, get_user(args.user), zero_or_nah(args.zero)) {
-        Ok(success) => println!("success: {}", success),
-        Err(()) => println!("failure: none found"),
-    };
+#[tokio::main]
+async fn main() {
+    let mut handles = vec![];
+    for addr in 2..=254 {
+        let handle = tokio::spawn(async move {
+            if let Ok(success) = run_ssh(&addr).await {
+                println!("success: {}", success)
+            };
+        });
+        handles.push(handle);
+    }
+    for handle in handles {
+        handle.await.unwrap();
+    }
+}
+
+fn zero_or_nah(zero: &bool) -> char {
+    match zero {
+        false => '1',
+        true => '0',
+    }
 }
 
 fn get_user(name: Option<String>) -> String {
@@ -42,35 +58,23 @@ fn get_user(name: Option<String>) -> String {
     }
 }
 
-fn zero_or_nah(zero: bool) -> char {
-    match zero {
-        false => '1',
-        true => '0',
-    }
-}
-
-fn run_ssh(port: u32, user: String, third: char) -> Result<String, ()> {
-    println!("ssh -p {} {}@192.168.{}.*", port, user, third);
-    if third == '1' {
-        println!("if it stalls, try running with -0")
-    } else {
-        println!("if it stalls, try running without -0")
-    }
-    for addr in 2..=254 {
-        if Command::new("ssh")
-            .arg(format!("-p {}", port))
-            .arg(format!("{}@192.168.{}.{}", user, third, addr))
-            .status()
-            .unwrap()
-            .code()
-            .unwrap()
-            == 0
-        {
-            return Ok(format!(
-                "ssh -p {} {}@192.168.{}.{}",
-                port, user, third, addr
-            ));
-        }
+async fn run_ssh(addr: &u8) -> Result<String, ()> {
+    let args = Args::parse();
+    let user = get_user(args.user);
+    let third = zero_or_nah(&args.zero);
+    if Command::new("ssh")
+        .arg(format!("-p {}", args.port))
+        .arg(format!("{}@192.168.{}.{}", user, third, addr))
+        .status()
+        .unwrap()
+        .code()
+        .unwrap()
+        == 0
+    {
+        return Ok(format!(
+            "ssh -p {} {}@192.168.{}.{}",
+            args.port, user, third, addr
+        ));
     }
     return Err(());
 }
