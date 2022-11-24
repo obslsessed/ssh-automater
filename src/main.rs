@@ -1,7 +1,7 @@
 use clap::Parser;
 use std::process::Command;
+use tokio::time::{sleep, Duration};
 use users::get_current_username;
-// use users::get_current_username;
 
 /// a (bad) thing to go through (local) ip addresses and (try to) ssh into them.
 /// basically, imagine if you could run "ssh 192.168.1.*".
@@ -31,6 +31,7 @@ async fn main() {
             };
         });
         handles.push(handle);
+        sleep(Duration::from_millis(250)).await;
     }
     for handle in handles {
         handle.await.unwrap();
