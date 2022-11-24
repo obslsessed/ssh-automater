@@ -1,7 +1,8 @@
 # ssh-automater
 some ssh thing
 ## usage
-### this is copied directly from the --help
+this is copied directly from the --help
+
 ```
 a (bad) thing to go through (local) ip addresses and (try to) ssh into them. basically, imagine if you could run "ssh 192.168.1.*"
 
@@ -16,4 +17,5 @@ Options:
   ```
 ## notes
 i love rust
+
 might not work on windows, i don't know and i don't care
